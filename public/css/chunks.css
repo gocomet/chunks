@@ -1,0 +1,82 @@
+.reset {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reset li {
+  display: inline-block;
+}
+
+.chunk {
+  background: #eee;
+  border-radius: 5px;
+  cursor: pointer;
+  display: inline-block;
+  margin: 10px;
+  padding: 20px 30px 20px 20px;
+  position: relative;
+  text-align: center;
+}
+
+.chunk h2 {
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.chunk input {
+  height: 2rem;
+  margin: 0;
+}
+
+
+.chunk .controls {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 20px;
+}
+
+.chunk .control {
+  background: #fff;
+  margin: 2px;
+  padding: 5px;
+}
+
+.chunk.unscheduled {
+  background: #fdd;
+}
+
+.chunk.scheduled {
+  background: #dfd;
+}
+
+.bin {
+  border-radius: 3px;
+  border: 1px solid #ddd;
+  padding: 20px;
+}
+
+.heading-action {
+  left: 20px;
+  position: relative;
+  top: 6px;
+}
+
+.chunks-total {
+  padding-top: 100px;
+}
+
+.cell {
+  background: #eee;
+  margin-bottom: 20px;
+  min-height: 80px;
+}
+
+.cell.highlight {
+  background: #f9f9e1;
+}
+
+.cal-row h3 {
+  margin-top: 18px;
+}
