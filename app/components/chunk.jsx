@@ -1,6 +1,7 @@
 var React = require('react');
 var DragSource = require('react-dnd').DragSource;
 var store = require('../store.js');
+var Textfield = require('./textfield.jsx');
 
 var spec = {
 	/**
@@ -56,46 +57,6 @@ function collect(connect, monitor) {
  }
 
 var Chunk = React.createClass({
-	startEditing: function(e) {
-		store.dispatch({
-			type: 'CHUNKS#START_EDITING',
-			id: this.props.model.id
-		});
-	},
-
-	checkForEnter: function(e) {
-		if (e.charCode === 13) {
-			this.stopEditing();
-		}
-	},
-
-	stopEditing: function(e) {
-		store.dispatch({
-			type: 'CHUNKS#STOP_EDITING',
-			id: this.props.model.id
-		});
-	},
-
-	updateLabel: function(e) {
-		store.dispatch({
-			type: 'CHUNKS#UPDATE_LABEL',
-			id: this.props.model.id,
-			label: e.target.value
-		});
-
-		store.dispatch({
-			type: 'SCHEDULED_CHUNKS#UPDATE_LABEL',
-			id: this.props.model.id,
-			label: e.target.value
-		});
-	},
-
-	componentDidUpdate: function() {
-		if (this.refs.labelInput) {
-			this.refs.labelInput.focus();
-		}
-	},
-
 	schedule: function(pos) {
 		store.dispatch({
 			type: 'CHUNKS#SCHEDULE',
@@ -129,37 +90,23 @@ var Chunk = React.createClass({
 		});
 	},
 
+	updateLabel: function(e) {
+		store.dispatch({
+			type: 'CHUNKS#UPDATE_LABEL',
+			id: this.props.model.id,
+			label: e.target.value
+		});
+	},
+
 	render: function() {
-		var textField;
-		var classNames;
-		var duplicateButton;
-
-		classNames = this.props.model.name + ' ' + (this.props.model.isScheduled ? 'scheduled': 'unscheduled');
-
-		if (this.props.model.isEditing) {
-			textField = <input
-	 			type='text'
-	 			ref='labelInput'
-	 			value={this.props.model.label}
-	 			onChange={this.updateLabel}
-	 			onBlur={this.stopEditing}
-	 			onKeyPress={this.checkForEnter} />
-		} else {
-			textField = <h2>{this.props.model.label}</h2>
-		}
-
-		if (!this.props.model.isScheduled) {
-			duplicateButton	= <button className='duplicate control' onClick={this.duplicate}>+</button>;
-		} else {
-			duplicateButton = '';
-		}
+		var classNames = this.props.model.name + ' ' + (this.props.model.isScheduled ? 'scheduled': 'unscheduled');
 
 		return this.props.connectDragSource(
-			<div className={classNames} onClick={this.startEditing} style={{ opacity: this.props.isDragging ? 0.5 : 1 }}>
-				{textField}
+			<div className={classNames} style={{ opacity: this.props.isDragging ? 0.5 : 1 }}>
+				<Textfield value={this.props.model.label} changehandler={this.updateLabel} />
 				<div className='controls'>
 					<button className='destroy control' onClick={this.destroy}>x</button>
-					{duplicateButton}
+					<button className='duplicate control' onClick={this.duplicate} style={{ display: this.props.model.isScheduled ? 'none': 'inline-block' }}>+</button>
 				</div>
 			</div>
 		);

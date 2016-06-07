@@ -20837,25 +20837,27 @@
 
 	var Redux = __webpack_require__(/*! redux */ 169);
 	var Lockr = __webpack_require__(/*! lockr */ 182);
-	var chunksReducer = __webpack_require__(/*! ./stores/chunks.js */ 183);
+	var chunksController = __webpack_require__(/*! ./controllers/chunks.js */ 183);
 	
 	var store = Redux.createStore(Redux.combineReducers({
-		chunks: chunksReducer
+		chunks: chunksController
 	}));
 	
 	/**
 	 * wrap Redux store to add convenient filter methods
 	 */
 	var storeWrapper = {
-		getStore: function () {
+		getState: function () {
 			return store.getState.call(store);
 		},
 	
 		dispatch: function (action) {
 			var dispatched = store.dispatch.apply(store, [action]);
+			var collection = dispatched.type.substr(0, dispatched.type.indexOf('#')).toLowerCase();
 	
-			// when an event is dispatched, save the store results
-			Lockr.set('chunks', store.getState.call(store).chunks);
+			// when an event is dispatched,
+			// save the store results by collection
+			Lockr.set(collection, this.getState()[collection]);
 	
 			return dispatched;
 		},
@@ -20865,7 +20867,7 @@
 		},
 	
 		filter: function (collectionName, filterProp) {
-			var collection = store.getState.call(store)[collectionName];
+			var collection = this.getState()[collectionName];
 	
 			return collection.filter(function (item) {
 				return item[filterProp];
@@ -20873,7 +20875,7 @@
 		},
 	
 		not: function (collectionName, filterProp) {
-			var collection = store.getState.call(store)[collectionName];
+			var collection = this.getState()[collectionName];
 	
 			return collection.filter(function (item) {
 				return !item[filterProp];
@@ -21942,30 +21944,21 @@
 
 /***/ },
 /* 183 */
-/*!******************************!*\
-  !*** ./app/stores/chunks.js ***!
-  \******************************/
+/*!***********************************!*\
+  !*** ./app/controllers/chunks.js ***!
+  \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
-	var Lockr = __webpack_require__(/*! lockr */ 182);
 	var _ = __webpack_require__(/*! underscore */ 184);
+	var Lockr = __webpack_require__(/*! lockr */ 182);
+	var CHUNK_MODEL = __webpack_require__(/*! ../models/chunk.js */ 339);
 	
-	// TODO: store using some persistant form of memory
+	// get localstorage by default
 	var DEFAULT_CHUNKS = Lockr.get('chunks') || [];
-	
-	// define chunk data structure
-	var CHUNK_MODEL = {
-		name: 'chunk',
-		label: 'Chunk',
-		isScheduled: false,
-		isEditing: false,
-		id: null,
-		pos: null
-	};
 	
 	var i = 0;
 	
-	var chunks = function (state, action) {
+	var chunksController = function (state, action) {
 		if (!state) {
 			state = DEFAULT_CHUNKS;
 		}
@@ -21973,22 +21966,6 @@
 		switch (action.type) {
 			case 'CHUNKS#NEW':
 				return state.concat([_.extend({}, CHUNK_MODEL, _.omit(action, 'type'), { id: ++i })]);
-	
-			case 'CHUNKS#START_EDITING':
-				return state.map(function (chunk) {
-					if (chunk.id !== action.id) {
-						return chunk;
-					}
-					return _.extend({}, chunk, { isEditing: true });
-				});
-	
-			case 'CHUNKS#STOP_EDITING':
-				return state.map(function (chunk) {
-					if (chunk.id !== action.id) {
-						return chunk;
-					}
-					return _.extend({}, chunk, { isEditing: false });
-				});
 	
 			case 'CHUNKS#UPDATE_LABEL':
 				return state.map(function (chunk) {
@@ -22024,7 +22001,7 @@
 		}
 	};
 	
-	module.exports = chunks;
+	module.exports = chunksController;
 
 /***/ },
 /* 184 */
@@ -23594,8 +23571,8 @@
 	var HTML5Backend = __webpack_require__(/*! react-dnd-html5-backend */ 186);
 	var DragDropContext = __webpack_require__(/*! react-dnd */ 281).DragDropContext;
 	var Calendar = __webpack_require__(/*! ./calendar.jsx */ 333);
-	var Bin = __webpack_require__(/*! ./bin.jsx */ 336);
-	var Metrics = __webpack_require__(/*! ./metrics.jsx */ 337);
+	var Bin = __webpack_require__(/*! ./bin.jsx */ 337);
+	var Metrics = __webpack_require__(/*! ./metrics.jsx */ 338);
 	
 	var App = React.createClass({
 		displayName: 'App',
@@ -32061,6 +32038,7 @@
 	var React = __webpack_require__(/*! react */ 1);
 	var DragSource = __webpack_require__(/*! react-dnd */ 281).DragSource;
 	var store = __webpack_require__(/*! ../store.js */ 168);
+	var Textfield = __webpack_require__(/*! ./textfield.jsx */ 336);
 	
 	var spec = {
 		/**
@@ -32118,46 +32096,6 @@
 	var Chunk = React.createClass({
 		displayName: 'Chunk',
 	
-		startEditing: function (e) {
-			store.dispatch({
-				type: 'CHUNKS#START_EDITING',
-				id: this.props.model.id
-			});
-		},
-	
-		checkForEnter: function (e) {
-			if (e.charCode === 13) {
-				this.stopEditing();
-			}
-		},
-	
-		stopEditing: function (e) {
-			store.dispatch({
-				type: 'CHUNKS#STOP_EDITING',
-				id: this.props.model.id
-			});
-		},
-	
-		updateLabel: function (e) {
-			store.dispatch({
-				type: 'CHUNKS#UPDATE_LABEL',
-				id: this.props.model.id,
-				label: e.target.value
-			});
-	
-			store.dispatch({
-				type: 'SCHEDULED_CHUNKS#UPDATE_LABEL',
-				id: this.props.model.id,
-				label: e.target.value
-			});
-		},
-	
-		componentDidUpdate: function () {
-			if (this.refs.labelInput) {
-				this.refs.labelInput.focus();
-			}
-		},
-	
 		schedule: function (pos) {
 			store.dispatch({
 				type: 'CHUNKS#SCHEDULE',
@@ -32191,43 +32129,21 @@
 			});
 		},
 	
+		updateLabel: function (e) {
+			store.dispatch({
+				type: 'CHUNKS#UPDATE_LABEL',
+				id: this.props.model.id,
+				label: e.target.value
+			});
+		},
+	
 		render: function () {
-			var textField;
-			var classNames;
-			var duplicateButton;
-	
-			classNames = this.props.model.name + ' ' + (this.props.model.isScheduled ? 'scheduled' : 'unscheduled');
-	
-			if (this.props.model.isEditing) {
-				textField = React.createElement('input', {
-					type: 'text',
-					ref: 'labelInput',
-					value: this.props.model.label,
-					onChange: this.updateLabel,
-					onBlur: this.stopEditing,
-					onKeyPress: this.checkForEnter });
-			} else {
-				textField = React.createElement(
-					'h2',
-					null,
-					this.props.model.label
-				);
-			}
-	
-			if (!this.props.model.isScheduled) {
-				duplicateButton = React.createElement(
-					'button',
-					{ className: 'duplicate control', onClick: this.duplicate },
-					'+'
-				);
-			} else {
-				duplicateButton = '';
-			}
+			var classNames = this.props.model.name + ' ' + (this.props.model.isScheduled ? 'scheduled' : 'unscheduled');
 	
 			return this.props.connectDragSource(React.createElement(
 				'div',
-				{ className: classNames, onClick: this.startEditing, style: { opacity: this.props.isDragging ? 0.5 : 1 } },
-				textField,
+				{ className: classNames, style: { opacity: this.props.isDragging ? 0.5 : 1 } },
+				React.createElement(Textfield, { value: this.props.model.label, changehandler: this.updateLabel }),
 				React.createElement(
 					'div',
 					{ className: 'controls' },
@@ -32236,7 +32152,11 @@
 						{ className: 'destroy control', onClick: this.destroy },
 						'x'
 					),
-					duplicateButton
+					React.createElement(
+						'button',
+						{ className: 'duplicate control', onClick: this.duplicate, style: { display: this.props.model.isScheduled ? 'none' : 'inline-block' } },
+						'+'
+					)
 				)
 			));
 		}
@@ -32246,6 +32166,81 @@
 
 /***/ },
 /* 336 */
+/*!**************************************!*\
+  !*** ./app/components/textfield.jsx ***!
+  \**************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Textfield
+	 * toggles between text and an input field when clicked
+	 * requires two props:
+	 * - <value:string>
+	 * - <changehandler:function>
+	 */
+	var React = __webpack_require__(/*! react */ 1);
+	
+	var Textfield = React.createClass({
+		displayName: 'Textfield',
+	
+		getInitialState: function () {
+			return { isEditing: false };
+		},
+	
+		startEditing: function (e) {
+			this.setState({
+				isEditing: true
+			});
+		},
+	
+		checkForEnter: function (e) {
+			if (e.charCode === 13) {
+				this.stopEditing();
+			}
+		},
+	
+		stopEditing: function (e) {
+			this.setState({
+				isEditing: false
+			});
+		},
+	
+		componentDidUpdate: function () {
+			if (this.refs.input) {
+				this.refs.input.focus();
+			}
+		},
+	
+		render: function () {
+			var textField;
+			if (this.state.isEditing) {
+				textField = React.createElement('input', {
+					type: 'text',
+					ref: 'input',
+					value: this.props.value,
+					onChange: this.props.changehandler,
+					onBlur: this.stopEditing,
+					onKeyPress: this.checkForEnter });
+			} else {
+				textField = React.createElement(
+					'a',
+					{ href: 'javascript:void(0)', onClick: this.startEditing },
+					this.props.value
+				);
+			}
+	
+			return React.createElement(
+				'div',
+				{ className: 'textfield' },
+				textField
+			);
+		}
+	});
+	
+	module.exports = Textfield;
+
+/***/ },
+/* 337 */
 /*!********************************!*\
   !*** ./app/components/bin.jsx ***!
   \********************************/
@@ -32340,7 +32335,7 @@
 	module.exports = DropTarget('chunk', spec, collect)(Bin);
 
 /***/ },
-/* 337 */
+/* 338 */
 /*!************************************!*\
   !*** ./app/components/metrics.jsx ***!
   \************************************/
@@ -32380,6 +32375,26 @@
 	});
 	
 	module.exports = Metrics;
+
+/***/ },
+/* 339 */
+/*!*****************************!*\
+  !*** ./app/models/chunk.js ***!
+  \*****************************/
+/***/ function(module, exports) {
+
+	/**
+	 * define Chunk model
+	 * object structure
+	 */
+	module.exports = {
+		name: 'chunk',
+		label: 'Chunk',
+		isScheduled: false,
+		isEditing: false,
+		id: null,
+		pos: null
+	};
 
 /***/ }
 /******/ ]);

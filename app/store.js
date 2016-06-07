@@ -1,24 +1,26 @@
 var Redux = require('redux');
 var Lockr = require('lockr');
-var chunksReducer = require('./stores/chunks.js');
+var chunksController = require('./controllers/chunks.js');
 
 var store = Redux.createStore(Redux.combineReducers({
-	chunks: chunksReducer
+	chunks: chunksController
 }));
 
 /**
  * wrap Redux store to add convenient filter methods
  */
 var storeWrapper = {
-	getStore: function() {
+	getState: function() {
 		return store.getState.call(store);
 	},
 
 	dispatch: function(action) {
 		var dispatched = store.dispatch.apply(store, [action]);
+		var collection = dispatched.type.substr(0, dispatched.type.indexOf('#')).toLowerCase();
 		
-		// when an event is dispatched, save the store results
-		Lockr.set('chunks', store.getState.call(store).chunks);
+		// when an event is dispatched,
+		// save the store results by collection
+		Lockr.set(collection, this.getState()[collection]);
 
 		return dispatched;
 	},
@@ -28,7 +30,7 @@ var storeWrapper = {
 	},
 
 	filter: function(collectionName, filterProp) {
-		var collection = store.getState.call(store)[collectionName];
+		var collection = this.getState()[collectionName];
 
 		return collection.filter(function(item) {
 			return item[filterProp];
@@ -36,7 +38,7 @@ var storeWrapper = {
 	},
 
 	not: function(collectionName, filterProp) {
-		var collection = store.getState.call(store)[collectionName];
+		var collection = this.getState()[collectionName];
 
 		return collection.filter(function(item) {
 			return !item[filterProp];

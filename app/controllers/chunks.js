@@ -1,22 +1,13 @@
-var Lockr = require('lockr');
 var _ = require('underscore');
+var Lockr = require('lockr');
+var CHUNK_MODEL = require('../models/chunk.js');
 
-// TODO: store using some persistant form of memory
+// get localstorage by default
 var DEFAULT_CHUNKS = Lockr.get('chunks') || [];
-
-// define chunk data structure
-var CHUNK_MODEL = {
-	name: 'chunk',
-	label: 'Chunk',
-	isScheduled: false,
-	isEditing: false,
-	id: null,
-	pos: null
-};
 
 var i = 0;
 
-var chunks = function(state, action) {
+var chunksController = function(state, action) {
 	if (!state) {
 		state = DEFAULT_CHUNKS;
 	}
@@ -29,22 +20,6 @@ var chunks = function(state, action) {
 				_.omit(action, 'type'),
 				{ id: ++i }
 			)]);
-		
-		case 'CHUNKS#START_EDITING':
-			return state.map(function(chunk) {
-				if (chunk.id !== action.id) {
-					return chunk;
-				}
-				return _.extend({}, chunk, { isEditing: true });
-			});
-
-		case 'CHUNKS#STOP_EDITING':
-			return state.map(function(chunk) {
-				if (chunk.id !== action.id) {
-					return chunk;
-				}
-				return _.extend({}, chunk, { isEditing: false });
-			});
 
 		case 'CHUNKS#UPDATE_LABEL':
 			return state.map(function(chunk) {
@@ -80,4 +55,4 @@ var chunks = function(state, action) {
 	}
 };
 
-module.exports = chunks;
+module.exports = chunksController;
