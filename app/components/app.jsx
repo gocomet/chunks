@@ -4,6 +4,7 @@ var DragDropContext = require('react-dnd').DragDropContext;
 var Calendar = require('./calendar.jsx');
 var Bin = require('./bin.jsx');
 var Metrics = require('./metrics.jsx');
+var Groups = require('./groups.jsx');
 
 var App = React.createClass({
 	render() {
@@ -12,6 +13,7 @@ var App = React.createClass({
 				<Metrics scheduledChunks={this.props.scheduledChunks} binChunks={this.props.binChunks} />
 				<Calendar chunks={this.props.scheduledChunks} />
 				<Bin chunks={this.props.binChunks} />
+				<Groups groups={this.props.groups} />
 			</div>
 		);
 	}

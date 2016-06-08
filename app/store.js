@@ -1,9 +1,11 @@
 var Redux = require('redux');
 var Lockr = require('lockr');
 var chunksController = require('./controllers/chunks.js');
+var groupsController = require('./controllers/groups.js');
 
 var store = Redux.createStore(Redux.combineReducers({
-	chunks: chunksController
+	chunks: chunksController,
+	groups: groupsController
 }));
 
 /**
@@ -43,6 +45,14 @@ var storeWrapper = {
 		return collection.filter(function(item) {
 			return !item[filterProp];
 		});
+	},
+
+	find: function(collectionName, recordID) {
+		var collection = this.getState()[collectionName];
+
+		return collection.filter(function(item) {
+			return item.id === recordID;
+		})[0];
 	}
 };
 

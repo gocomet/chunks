@@ -19,8 +19,10 @@ var spec = {
 	// hover: function(props, monitor, component) {
 	// },
 
-	// canDrop: function(props, monitor) {
-	// }
+	canDrop: function(props, monitor) {
+		var item = monitor.getItem();
+		return item.isScheduled;
+	}
 };
 
 /**
@@ -30,7 +32,7 @@ var spec = {
 function collect(connect, monitor) {
   return {
     highlighted: monitor.canDrop(),
-    hovered: monitor.isOver(),
+    hovered: monitor.isOver() && monitor.canDrop(),
     connectDropTarget: connect.dropTarget()
   };
 }
@@ -44,13 +46,12 @@ var Bin = React.createClass({
 
 	render: function() {
 		return this.props.connectDropTarget(
-			<div className='bin row'>
+			<div className={ this.props.hovered ? 'bin row highlight' : 'bin row ' }>
 				<div className='row'>
 					<div className='column small-12'>
 						<h2 className='text-center'>
 							Bin
 							<button
-								ref='addChunkBtn'
 								onClick={this.addChunk}
 								className='button heading-action'>
 								New Chunk
@@ -60,7 +61,7 @@ var Bin = React.createClass({
 				</div>
 				
 				<div className='row'>
-					<div className='column small-12' ref='chunksContainer'>
+					<div className='column small-12'>
 						{this.props.chunks.map(function(chunk) {
 							return <Chunk model={chunk} key={chunk.id} />;
 						})}

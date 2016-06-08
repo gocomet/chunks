@@ -1,53 +1,48 @@
+/**
+ * chunksController
+ * controller actions relating to the chunks collection
+ * keep in mind this is actually a reducer function
+ * for use in the Redux pattern
+ */
+
 var _ = require('underscore');
 var Lockr = require('lockr');
-var CHUNK_MODEL = require('../models/chunk.js');
+
+var COLLECTION_NAME = 'chunks';
+var MODEL = require('../models/chunk.js');
 
 // get localstorage by default
-var DEFAULT_CHUNKS = Lockr.get('chunks') || [];
+var DEFAULT_COLLECTION = Lockr.get(COLLECTION_NAME) || [];
 
 var i = 0;
 
-var chunksController = function(state, action) {
+var controller = function(state, action) {
 	if (!state) {
-		state = DEFAULT_CHUNKS;
+		state = DEFAULT_COLLECTION;
 	}
 
 	switch (action.type) {
+		case 'CHUNKS#RESET':
+			return [];
 		case 'CHUNKS#NEW':
 			return state.concat([_.extend(
 				{},
-				CHUNK_MODEL,
-				_.omit(action, 'type'),
+				MODEL,
+				_.omit(action, 'type', 'id'),
 				{ id: ++i }
 			)]);
 
-		case 'CHUNKS#UPDATE_LABEL':
-			return state.map(function(chunk) {
-				if (chunk.id !== action.id) {
-					return chunk;
+		case 'CHUNKS#UPDATE':
+			return state.map(function(record) {
+				if (record.id !== action.id) {
+					return record;
 				}
-				return _.extend({}, chunk, { label: action.label });
-			});
-
-		case 'CHUNKS#SCHEDULE':
-			return state.map(function(chunk) {
-				if (chunk.id !== action.id) {
-					return chunk;
-				}
-				return _.extend({}, chunk, { isScheduled: true, pos: action.pos });
-			});
-		
-		case 'CHUNKS#UNSCHEDULE':
-			return state.map(function(chunk) {
-				if (chunk.id !== action.id) {
-					return chunk;
-				}
-				return _.extend({}, chunk, { isScheduled: false, pos: null });
+				return _.extend({}, record, _.omit(action, 'type', 'id'));
 			});
 
 		case 'CHUNKS#DELETE':
-			return state.filter(function(chunk) {
-				return chunk.id !== action.id;
+			return state.filter(function(record) {
+				return record.id !== action.id;
 			});
 
 		default:
@@ -55,4 +50,4 @@ var chunksController = function(state, action) {
 	}
 };
 
-module.exports = chunksController;
+module.exports = controller;

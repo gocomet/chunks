@@ -6,14 +6,24 @@ var Metrics = React.createClass({
 		var totalLength = binLength + calLength;
 		return (
 			<div className='metrics row'>
-				<div className='column small-12 medium-4 text-center'>
-					Scheduled Chunks: {calLength}
+				<div className='metrics-groups row'>
+					<div className='column small-12 medium-4 text-center'>
+						Groups here
+					</div>
 				</div>
-				<div className='column small-12 medium-4 text-center'>
-					Unscheduled Chunks: {binLength}
-				</div>
-				<div className='column small-12 medium-4 text-center'>
-					Total Chunks: {totalLength}
+				<div className='metrics-chunks row'>
+					<div className='column small-12 text-center'>
+						Chunks
+					</div>
+					<div className='column small-12 medium-4 text-center'>
+						Scheduled Chunks: {calLength}
+					</div>
+					<div className='column small-12 medium-4 text-center'>
+						Unscheduled Chunks: {binLength}
+					</div>
+					<div className='column small-12 medium-4 text-center'>
+						Total Chunks: {totalLength}
+					</div>
 				</div>
 			</div>
 		);

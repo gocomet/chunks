@@ -1,0 +1,90 @@
+/**
+ * groupsController
+ * controller actions relating to the groups collection
+ * keep in mind this is actually a reducer function
+ * for use in the Redux pattern
+ */
+
+var _ = require('underscore');
+var Lockr = require('lockr');
+
+var MODEL = require('../models/group.js');
+var COLLECTION_NAME = 'groups';
+
+// get localstorage by default
+var DEFAULT_COLLECTION = Lockr.get(COLLECTION_NAME) || [];
+
+var i = 0;
+
+var controller = function(state, action) {
+	if (!state) {
+		state = DEFAULT_COLLECTION;
+	}
+
+	switch (action.type) {
+		case 'GROUPS#RESET':
+			return [];
+
+		case 'GROUPS#NEW':
+			return state.concat([_.extend(
+				{},
+				MODEL,
+				_.omit(action, 'type', 'id'),
+				{ id: ++i }
+			)]);
+
+		case 'GROUPS#UPDATE':
+			return state.map(function(record) {
+				if (record.id !== action.id) {
+					return record;
+				}
+				return _.extend({}, record, _.omit(action, 'type', 'id'));
+			});
+
+		case 'GROUPS#ADD_CHUNK':
+			return state.map(function(record) {
+				var group;
+				var i;
+
+				if (record.id !== action.id) {
+					return record;
+				}
+
+				group = _.extend({}, record);
+				i = group.chunkIds.indexOf(action.chunkId);
+				if (i === -1) {
+					group.chunkIds.push(action.chunkId);
+				}
+
+				return group;
+			});
+
+		case 'GROUPS#REMOVE_CHUNK':
+			return state.map(function(record) {
+				var group;
+				var i;
+
+				if (record.id !== action.id) {
+					return record;
+				}
+
+				group = _.extend({}, record);
+				i = group.chunkIds.indexOf(action.chunkId);
+				if (i !== -1) {
+					group.chunkIds = group.chunkIds.splice(i, 1);
+				}
+
+				return group;
+			});
+
+		case 'GROUPS#DELETE':
+			return state.filter(function(record) {
+				return record.id !== action.id;
+			});
+
+		default:
+			return state;
+	}
+};
+
+module.exports = controller;

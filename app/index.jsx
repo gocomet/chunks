@@ -5,7 +5,7 @@ var App = require('./components/app.jsx');
 
 function render() {
 	ReactDOM.render(
-		<App scheduledChunks={store.filter('chunks', 'isScheduled')} binChunks={store.not('chunks', 'isScheduled')} />,
+		<App scheduledChunks={store.filter('chunks', 'isScheduled')} binChunks={store.not('chunks', 'isScheduled')} groups={store.getState().groups} />,
 		document.getElementById('app')
 	);
 }

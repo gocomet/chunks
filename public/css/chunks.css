@@ -14,21 +14,19 @@
   cursor: pointer;
   display: inline-block;
   margin: 10px;
-  padding: 20px 30px 20px 20px;
+  padding: 8px 30px 8px 20px;
   position: relative;
   text-align: center;
 }
 
-.chunk h2 {
-  font-size: 18px;
-  margin-bottom: 5px;
+.chunk a {
+  color: #fff;
 }
 
 .chunk input {
   height: 2rem;
   margin: 0;
 }
-
 
 .chunk .controls {
   position: absolute;
@@ -54,7 +52,12 @@
 .bin {
   border-radius: 3px;
   border: 1px solid #ddd;
+  margin-bottom: 20px;
   padding: 20px;
+}
+
+.bin.highlight {
+  background: #f9f9e1;
 }
 
 .heading-action {
