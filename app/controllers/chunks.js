@@ -14,8 +14,6 @@ var MODEL = require('../models/chunk.js');
 // get localstorage by default
 var DEFAULT_COLLECTION = Lockr.get(COLLECTION_NAME) || [];
 
-var i = 0;
-
 var controller = function(state, action) {
 	if (!state) {
 		state = DEFAULT_COLLECTION;
@@ -29,7 +27,7 @@ var controller = function(state, action) {
 				{},
 				MODEL,
 				_.omit(action, 'type', 'id'),
-				{ id: ++i }
+				{ id: +new Date() }
 			)]);
 
 		case 'CHUNKS#UPDATE':

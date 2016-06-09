@@ -20886,10 +20886,18 @@
 	
 		find: function (collectionName, recordID) {
 			var collection = this.getState()[collectionName];
+			var result;
 	
-			return collection.filter(function (item) {
-				return item.id === recordID;
-			})[0];
+			if (typeof recordID === 'function') {
+				result = collection.filter(recordID);
+				result = result[result.length - 1];
+			} else {
+				result = collection.filter(function (item) {
+					return item.id === recordID;
+				})[0];
+			}
+	
+			return result;
 		}
 	};
 	
@@ -21975,8 +21983,6 @@
 	// get localstorage by default
 	var DEFAULT_COLLECTION = Lockr.get(COLLECTION_NAME) || [];
 	
-	var i = 0;
-	
 	var controller = function (state, action) {
 		if (!state) {
 			state = DEFAULT_COLLECTION;
@@ -21986,7 +21992,7 @@
 			case 'CHUNKS#RESET':
 				return [];
 			case 'CHUNKS#NEW':
-				return state.concat([_.extend({}, MODEL, _.omit(action, 'type', 'id'), { id: ++i })]);
+				return state.concat([_.extend({}, MODEL, _.omit(action, 'type', 'id'), { id: +new Date() })]);
 	
 			case 'CHUNKS#UPDATE':
 				return state.map(function (record) {
@@ -23582,7 +23588,6 @@
 		color: '#555',
 		groupId: null,
 		isScheduled: false,
-		isEditing: false,
 		id: null,
 		pos: null
 	};
@@ -23610,8 +23615,6 @@
 	// get localstorage by default
 	var DEFAULT_COLLECTION = Lockr.get(COLLECTION_NAME) || [];
 	
-	var i = 0;
-	
 	var controller = function (state, action) {
 		if (!state) {
 			state = DEFAULT_COLLECTION;
@@ -23622,7 +23625,10 @@
 				return [];
 	
 			case 'GROUPS#NEW':
-				return state.concat([_.extend({}, MODEL, _.omit(action, 'type', 'id'), { id: ++i })]);
+				var newRecord = _.extend({}, _.omit(MODEL, 'chunkIds'), { chunkIds: [] }, _.omit(action, 'type', 'id'), { id: +new Date() });
+				console.log(action);
+				console.log(newRecord);
+				return state.concat([newRecord]);
 	
 			case 'GROUPS#UPDATE':
 				return state.map(function (record) {
@@ -23709,9 +23715,9 @@
 	var HTML5Backend = __webpack_require__(/*! react-dnd-html5-backend */ 189);
 	var DragDropContext = __webpack_require__(/*! react-dnd */ 284).DragDropContext;
 	var Calendar = __webpack_require__(/*! ./calendar.jsx */ 336);
-	var Bin = __webpack_require__(/*! ./bin.jsx */ 339);
-	var Metrics = __webpack_require__(/*! ./metrics.jsx */ 340);
-	var Groups = __webpack_require__(/*! ./groups.jsx */ 341);
+	var Bin = __webpack_require__(/*! ./bin.jsx */ 340);
+	var Metrics = __webpack_require__(/*! ./metrics.jsx */ 341);
+	var Groups = __webpack_require__(/*! ./groups.jsx */ 342);
 	
 	var App = React.createClass({
 		displayName: 'App',
@@ -23720,7 +23726,7 @@
 			return React.createElement(
 				'div',
 				{ className: 'app' },
-				React.createElement(Metrics, { scheduledChunks: this.props.scheduledChunks, binChunks: this.props.binChunks }),
+				React.createElement(Metrics, { scheduledChunks: this.props.scheduledChunks, binChunks: this.props.binChunks, groups: this.props.groups }),
 				React.createElement(Calendar, { chunks: this.props.scheduledChunks }),
 				React.createElement(Bin, { chunks: this.props.binChunks }),
 				React.createElement(Groups, { groups: this.props.groups })
@@ -32175,11 +32181,16 @@
   \**********************************/
 /***/ function(module, exports, __webpack_require__) {
 
+	/**
+	 * dear god fix the mess that is
+	 * tightly-coupled action data manipulation and view
+	 * why why why
+	 */
 	var _ = __webpack_require__(/*! underscore */ 184);
 	var React = __webpack_require__(/*! react */ 1);
 	var DragSource = __webpack_require__(/*! react-dnd */ 284).DragSource;
 	var store = __webpack_require__(/*! ../store.js */ 168);
-	var Textfield = __webpack_require__(/*! ./textfield.jsx */ 343);
+	var Textfield = __webpack_require__(/*! ./textfield.jsx */ 339);
 	
 	var spec = {
 		/**
@@ -32271,16 +32282,32 @@
 		},
 	
 		duplicate: function (e) {
+			var _this = this;
+			var addedChunk;
+	
 			e.preventDefault();
 			e.stopPropagation();
-			var addedChunk = store.dispatch(_.extend({}, this.props.model, {
+	
+			store.dispatch(_.extend({}, this.props.model, {
 				type: 'CHUNKS#NEW'
 			}));
+	
+			addedChunk = store.find('chunks', function (chunk) {
+				var thisModel = _.omit(_this.props.model, 'id');
+				var chunkModel = _.omit(chunk, 'id');
+				var matches = true;
+				Object.keys(thisModel).forEach(function (prop) {
+					if (thisModel[prop] !== chunkModel[prop]) {
+						matches = false;
+					}
+				});
+				return matches;
+			});
 	
 			if (this.props.model.groupId) {
 				store.dispatch({
 					type: 'GROUPS#ADD_CHUNK',
-					id: value,
+					id: this.props.model.groupId,
 					chunkId: addedChunk.id
 				});
 			}
@@ -32295,36 +32322,36 @@
 		},
 	
 		updateGroup: function (e) {
-			var value = parseInt(e.target.options[e.target.selectedIndex].value, 10);
+			var value = parseInt(e.target.value, 10);
 			var group = store.find('groups', value);
 			var chunk = this.props.model;
 	
-			if (this.props.model.groupId && this.props.model.groupId !== value) {
+			if (chunk.groupId && chunk.groupId !== value) {
 				store.dispatch({
 					type: 'GROUPS#REMOVE_CHUNK',
-					id: this.props.model.groupId,
-					chunkId: this.props.model.id
+					id: chunk.groupId,
+					chunkId: chunk.id
 				});
 			}
 	
 			store.dispatch({
 				type: 'CHUNKS#UPDATE',
-				id: this.props.model.id,
+				id: chunk.id,
 				groupId: value
 			});
 	
 			store.dispatch({
 				type: 'GROUPS#ADD_CHUNK',
 				id: value,
-				chunkId: this.props.model.id
+				chunkId: chunk.id
 			});
 		},
 	
 		render: function () {
 			var allGroups = store.getState().groups;
 			var bgColor = this.props.model.color;
-			var thisGroup;
 			var thisGroupId;
+			var thisGroup;
 	
 			if (this.props.model.groupId) {
 				thisGroup = store.find('groups', this.props.model.groupId);
@@ -32340,29 +32367,18 @@
 				React.createElement(Textfield, { value: this.props.model.label, changehandler: this.updateLabel }),
 				React.createElement(
 					'select',
-					{ onChange: this.updateGroup },
+					{ value: thisGroupId ? thisGroupId : 'none', onChange: this.updateGroup },
 					React.createElement(
 						'option',
 						{ key: 0, value: 'none' },
 						'---'
 					),
 					allGroups.map(function (group, i) {
-						var opt;
-						i += 1;
-						if (group.id === thisGroupId) {
-							opt = React.createElement(
-								'option',
-								{ key: i, value: group.id, selected: true },
-								group.name
-							);
-						} else {
-							opt = React.createElement(
-								'option',
-								{ key: i, value: group.id },
-								group.name
-							);
-						}
-						return opt;
+						return React.createElement(
+							'option',
+							{ key: ++i, value: group.id },
+							group.name
+						);
 					})
 				),
 				React.createElement(
@@ -32387,6 +32403,81 @@
 
 /***/ },
 /* 339 */
+/*!**************************************!*\
+  !*** ./app/components/textfield.jsx ***!
+  \**************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Textfield
+	 * toggles between text and an input field when clicked
+	 * requires two props:
+	 * - <value:string>
+	 * - <changehandler:function>
+	 */
+	var React = __webpack_require__(/*! react */ 1);
+	
+	var Textfield = React.createClass({
+		displayName: 'Textfield',
+	
+		getInitialState: function () {
+			return { isEditing: false };
+		},
+	
+		startEditing: function (e) {
+			this.setState({
+				isEditing: true
+			});
+		},
+	
+		checkForEnter: function (e) {
+			if (e.charCode === 13) {
+				this.stopEditing();
+			}
+		},
+	
+		stopEditing: function (e) {
+			this.setState({
+				isEditing: false
+			});
+		},
+	
+		componentDidUpdate: function () {
+			if (this.refs.input) {
+				this.refs.input.focus();
+			}
+		},
+	
+		render: function () {
+			var textField;
+			if (this.state.isEditing) {
+				textField = React.createElement('input', {
+					type: 'text',
+					ref: 'input',
+					value: this.props.value,
+					onChange: this.props.changehandler,
+					onBlur: this.stopEditing,
+					onKeyPress: this.checkForEnter });
+			} else {
+				textField = React.createElement(
+					'a',
+					{ href: 'javascript:void(0)', onClick: this.startEditing },
+					this.props.value
+				);
+			}
+	
+			return React.createElement(
+				'div',
+				{ className: 'textfield' },
+				textField
+			);
+		}
+	});
+	
+	module.exports = Textfield;
+
+/***/ },
+/* 340 */
 /*!********************************!*\
   !*** ./app/components/bin.jsx ***!
   \********************************/
@@ -32482,7 +32573,7 @@
 	module.exports = DropTarget('chunk', spec, collect)(Bin);
 
 /***/ },
-/* 340 */
+/* 341 */
 /*!************************************!*\
   !*** ./app/components/metrics.jsx ***!
   \************************************/
@@ -32496,6 +32587,7 @@
 			var binLength = this.props.binChunks.length;
 			var calLength = this.props.scheduledChunks.length;
 			var totalLength = binLength + calLength;
+	
 			return React.createElement(
 				'div',
 				{ className: 'metrics row' },
@@ -32504,18 +32596,26 @@
 					{ className: 'metrics-groups row' },
 					React.createElement(
 						'div',
-						{ className: 'column small-12 medium-4 text-center' },
-						'Groups here'
+						{ className: 'column small-12 text-center' },
+						this.props.groups.map(function (group, i) {
+							return React.createElement(
+								'div',
+								{ key: i, className: 'chunk', style: { backgroundColor: group.color } },
+								React.createElement(
+									'p',
+									null,
+									group.name,
+									': ',
+									group.chunkIds.length,
+									' Chunks'
+								)
+							);
+						})
 					)
 				),
 				React.createElement(
 					'div',
 					{ className: 'metrics-chunks row' },
-					React.createElement(
-						'div',
-						{ className: 'column small-12 text-center' },
-						'Chunks'
-					),
 					React.createElement(
 						'div',
 						{ className: 'column small-12 medium-4 text-center' },
@@ -32542,14 +32642,14 @@
 	module.exports = Metrics;
 
 /***/ },
-/* 341 */
+/* 342 */
 /*!***********************************!*\
   !*** ./app/components/groups.jsx ***!
   \***********************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	var React = __webpack_require__(/*! react */ 1);
-	var Group = __webpack_require__(/*! ./group.jsx */ 342);
+	var Group = __webpack_require__(/*! ./group.jsx */ 343);
 	var store = __webpack_require__(/*! ../store.js */ 168);
 	
 	var Groups = React.createClass({
@@ -32603,7 +32703,7 @@
 	module.exports = Groups;
 
 /***/ },
-/* 342 */
+/* 343 */
 /*!**********************************!*\
   !*** ./app/components/group.jsx ***!
   \**********************************/
@@ -32611,7 +32711,7 @@
 
 	var React = __webpack_require__(/*! react */ 1);
 	var store = __webpack_require__(/*! ../store.js */ 168);
-	var Textfield = __webpack_require__(/*! ./textfield.jsx */ 343);
+	var Textfield = __webpack_require__(/*! ./textfield.jsx */ 339);
 	var Colorpicker = __webpack_require__(/*! ./colorpicker.jsx */ 344);
 	
 	var Group = React.createClass({
@@ -32670,81 +32770,6 @@
 	});
 	
 	module.exports = Group;
-
-/***/ },
-/* 343 */
-/*!**************************************!*\
-  !*** ./app/components/textfield.jsx ***!
-  \**************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Textfield
-	 * toggles between text and an input field when clicked
-	 * requires two props:
-	 * - <value:string>
-	 * - <changehandler:function>
-	 */
-	var React = __webpack_require__(/*! react */ 1);
-	
-	var Textfield = React.createClass({
-		displayName: 'Textfield',
-	
-		getInitialState: function () {
-			return { isEditing: false };
-		},
-	
-		startEditing: function (e) {
-			this.setState({
-				isEditing: true
-			});
-		},
-	
-		checkForEnter: function (e) {
-			if (e.charCode === 13) {
-				this.stopEditing();
-			}
-		},
-	
-		stopEditing: function (e) {
-			this.setState({
-				isEditing: false
-			});
-		},
-	
-		componentDidUpdate: function () {
-			if (this.refs.input) {
-				this.refs.input.focus();
-			}
-		},
-	
-		render: function () {
-			var textField;
-			if (this.state.isEditing) {
-				textField = React.createElement('input', {
-					type: 'text',
-					ref: 'input',
-					value: this.props.value,
-					onChange: this.props.changehandler,
-					onBlur: this.stopEditing,
-					onKeyPress: this.checkForEnter });
-			} else {
-				textField = React.createElement(
-					'a',
-					{ href: 'javascript:void(0)', onClick: this.startEditing },
-					this.props.value
-				);
-			}
-	
-			return React.createElement(
-				'div',
-				{ className: 'textfield' },
-				textField
-			);
-		}
-	});
-	
-	module.exports = Textfield;
 
 /***/ },
 /* 344 */

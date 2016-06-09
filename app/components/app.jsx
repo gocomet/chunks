@@ -10,7 +10,7 @@ var App = React.createClass({
 	render() {
 		return (
 			<div className='app'>
-				<Metrics scheduledChunks={this.props.scheduledChunks} binChunks={this.props.binChunks} />
+				<Metrics scheduledChunks={this.props.scheduledChunks} binChunks={this.props.binChunks} groups={this.props.groups} />
 				<Calendar chunks={this.props.scheduledChunks} />
 				<Bin chunks={this.props.binChunks} />
 				<Groups groups={this.props.groups} />

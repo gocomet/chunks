@@ -14,8 +14,6 @@ var COLLECTION_NAME = 'groups';
 // get localstorage by default
 var DEFAULT_COLLECTION = Lockr.get(COLLECTION_NAME) || [];
 
-var i = 0;
-
 var controller = function(state, action) {
 	if (!state) {
 		state = DEFAULT_COLLECTION;
@@ -26,12 +24,16 @@ var controller = function(state, action) {
 			return [];
 
 		case 'GROUPS#NEW':
-			return state.concat([_.extend(
+			var newRecord = _.extend(
 				{},
-				MODEL,
+				_.omit(MODEL, 'chunkIds'),
+				{ chunkIds: [] },
 				_.omit(action, 'type', 'id'),
-				{ id: ++i }
-			)]);
+				{ id: +new Date() }
+			);
+			console.log(action);
+			console.log(newRecord);
+			return state.concat([newRecord]);
 
 		case 'GROUPS#UPDATE':
 			return state.map(function(record) {

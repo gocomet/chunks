@@ -1,3 +1,8 @@
+/**
+ * dear god fix the mess that is
+ * tightly-coupled action data manipulation and view
+ * why why why
+ */
 var _ = require('underscore');
 var React = require('react');
 var DragSource = require('react-dnd').DragSource;
@@ -51,11 +56,11 @@ var spec = {
  * accessed via `this.props`
  */
 function collect(connect, monitor) {
- 	return {
- 		connectDragSource: connect.dragSource(),
- 		isDragging: monitor.isDragging()
- 	};
- }
+	return {
+		connectDragSource: connect.dragSource(),
+		isDragging: monitor.isDragging()
+	};
+}
 
 var Chunk = React.createClass({
 	schedule: function(pos) {
@@ -92,16 +97,32 @@ var Chunk = React.createClass({
 	},
 
 	duplicate: function(e) {
+		var _this = this;
+		var addedChunk;
+
 		e.preventDefault();
 		e.stopPropagation();
-		var addedChunk = store.dispatch(_.extend({}, this.props.model, {
+
+		store.dispatch(_.extend({}, this.props.model, {
 			type: 'CHUNKS#NEW'
 		}));
+
+		addedChunk = store.find('chunks', function(chunk) {
+			var thisModel = _.omit(_this.props.model, 'id');
+			var chunkModel = _.omit(chunk, 'id');
+			var matches = true;
+			Object.keys(thisModel).forEach(function(prop) {
+				if (thisModel[prop] !== chunkModel[prop]) {
+					matches = false;
+				}
+			});
+			return matches;
+		});
 
 		if (this.props.model.groupId) {
 			store.dispatch({
 				type: 'GROUPS#ADD_CHUNK',
-				id: value,
+				id: this.props.model.groupId,
 				chunkId: addedChunk.id
 			});
 		}
@@ -116,36 +137,36 @@ var Chunk = React.createClass({
 	},
 
 	updateGroup: function(e) {
-		var value = parseInt(e.target.options[e.target.selectedIndex].value, 10);
+		var value = parseInt(e.target.value, 10);
 		var group = store.find('groups', value);
 		var chunk = this.props.model;
-		
-		if (this.props.model.groupId && this.props.model.groupId !== value) {
+
+		if (chunk.groupId && chunk.groupId !== value) {
 			store.dispatch({
 				type: 'GROUPS#REMOVE_CHUNK',
-				id: this.props.model.groupId,
-				chunkId: this.props.model.id
+				id: chunk.groupId,
+				chunkId: chunk.id
 			});
 		}
 
 		store.dispatch({
 			type: 'CHUNKS#UPDATE',
-			id: this.props.model.id,
+			id: chunk.id,
 			groupId: value
 		});
 
 		store.dispatch({
 			type: 'GROUPS#ADD_CHUNK',
 			id: value,
-			chunkId: this.props.model.id
+			chunkId: chunk.id
 		});
 	},
 
 	render: function() {
 		var allGroups = store.getState().groups;
 		var bgColor = this.props.model.color;
-		var thisGroup;
 		var thisGroupId;
+		var thisGroup;
 
 		if (this.props.model.groupId) {
 			thisGroup = store.find('groups', this.props.model.groupId);
@@ -159,17 +180,10 @@ var Chunk = React.createClass({
 			<div className='chunk' style={{ backgroundColor: bgColor, opacity: this.props.isDragging ? 0.5 : 1 }}>
 				<Textfield value={this.props.model.label} changehandler={this.updateLabel} />
 				
-				<select onChange={this.updateGroup}>
+				<select value={thisGroupId ? thisGroupId: 'none'} onChange={this.updateGroup}>
 					<option key={0} value='none'>---</option>
 					{allGroups.map(function(group, i) {
-						var opt;
-						i += 1;
-						if (group.id === thisGroupId) {
-							opt = <option key={i} value={group.id} selected>{group.name}</option>;
-						} else {
-							opt = <option key={i} value={group.id}>{group.name}</option>;
-						}
-						return opt;
+						return <option key={++i} value={group.id}>{group.name}</option>;
 					})}
 				</select>
 				

@@ -49,10 +49,18 @@ var storeWrapper = {
 
 	find: function(collectionName, recordID) {
 		var collection = this.getState()[collectionName];
+		var result;
 
-		return collection.filter(function(item) {
-			return item.id === recordID;
-		})[0];
+		if (typeof recordID === 'function') {
+			result = collection.filter(recordID);
+			result = result[result.length - 1];
+		} else {
+			result = collection.filter(function(item) {
+				return item.id === recordID;
+			})[0];
+		} 
+
+		return result;
 	}
 };
 

@@ -8,7 +8,6 @@ module.exports = {
 	color: '#555',
 	groupId: null,
 	isScheduled: false,
-	isEditing: false,
 	id: null,
 	pos: null
 };
